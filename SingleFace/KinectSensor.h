@@ -27,14 +27,18 @@ public:
     float       GetZoomFactor() { return(m_ZoomFactor); };
     POINT*      GetViewOffSet() { return(&m_ViewOffset); };
     HRESULT     GetClosestHint(FT_VECTOR3D* pHint3D);
+	IFTResult*  m_pFTResult;
+	float		m_smallestDistance;
 
     bool        IsTracked(UINT skeletonId) { return(m_SkeletonTracked[skeletonId]);};
     FT_VECTOR3D NeckPoint(UINT skeletonId) { return(m_NeckPoint[skeletonId]);};
     FT_VECTOR3D HeadPoint(UINT skeletonId) { return(m_HeadPoint[skeletonId]);};
 
+
 protected:
     IFTImage*   m_VideoBuffer;
     IFTImage*   m_DepthBuffer;
+
     FT_VECTOR3D m_NeckPoint[NUI_SKELETON_COUNT];
     FT_VECTOR3D m_HeadPoint[NUI_SKELETON_COUNT];
     bool        m_SkeletonTracked[NUI_SKELETON_COUNT];

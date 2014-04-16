@@ -29,13 +29,10 @@ KinectSensor::KinectSensor()
     m_ViewOffset.y = 0;
 
 	// Get a working kinect sensor
-    int numSensors;
-    NuiGetSensorCount(&numSensors);
 	if (NuiCreateSensorByIndex(numOfInitilizedSensors, &m_Sensor) >= 0) {
 		numOfInitilizedSensors++;
 	}
 }
-
 
 
 KinectSensor::~KinectSensor()
@@ -458,7 +455,7 @@ HRESULT KinectSensor::GetClosestHint(FT_VECTOR3D* pHint3D)
 
     pHint3D[0] = m_NeckPoint[selectedSkeleton];
     pHint3D[1] = m_HeadPoint[selectedSkeleton];
-
+	m_smallestDistance = smallestDistance;
     return S_OK;
 }
 

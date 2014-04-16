@@ -13,6 +13,7 @@
 #include <FaceTrackLib.h>
 #include "FTHelper.h"
 #include "DualFTHelper.h"
+#include "MultiFTHelper.h"
 
 
 
@@ -30,7 +31,8 @@ public:
         , m_depthRes(NUI_IMAGE_RESOLUTION_320x240)
         , m_colorRes(NUI_IMAGE_RESOLUTION_640x480)
         , m_bNearMode(TRUE)
-        , m_bSeatedSkeletonMode(FALSE)
+        , m_bSeatedSkeletonMode(TRUE)
+
     {}
 
     int Run(HINSTANCE hInst, PWSTR lpCmdLine, int nCmdShow);
@@ -54,7 +56,8 @@ protected:
     HACCEL                      m_hAccelTable;
     EggAvatar                   m_eggavatar;
     //FTHelper                    m_DualFTHelper;
-	DualFTHelper                m_DualFTHelper;
+	//DualFTHelper                m_DualFTHelper;
+	MultiFTHelper               m_MultiFTHelper;
     IFTImage*                   m_pImageBuffer;
     IFTImage*                   m_pVideoBuffer;
 
@@ -126,22 +129,25 @@ BOOL SingleFace::InitInstance(HINSTANCE hInstance, PWSTR lpCmdLine, int nCmdShow
     ShowWindow(m_hWnd, nCmdShow);
     UpdateWindow(m_hWnd);
 
-    return SUCCEEDED(m_DualFTHelper.Init(m_hWnd,
-        FTHelperCallingBack,
-        this,
-        m_depthType,
-        m_depthRes,
-        m_bNearMode,
-        TRUE, // if near mode doesn't work, fall back to default mode
-        m_colorType,
-        m_colorRes,
-        m_bSeatedSkeletonMode));
+	bool IsInitOk = SUCCEEDED(m_MultiFTHelper.Init(	m_hWnd,
+											m_depthType,
+											m_depthRes,
+											m_bNearMode,
+											TRUE, // if near mode doesn't work, fall back to default mode
+											m_colorType,
+											m_colorRes,
+											m_bSeatedSkeletonMode));
+	if (IsInitOk)
+	{
+		IsInitOk &= SUCCEEDED(m_MultiFTHelper.InitThread(FTHelperCallingBack, this));
+	}
+    return  IsInitOk;
 }
 
 void SingleFace::UninitInstance()
 {
     // Clean up the memory allocated for Face Tracking and rendering.
-    m_DualFTHelper.Stop();
+	m_MultiFTHelper.Stop();
 
     if (m_hAccelTable)
     {
@@ -276,7 +282,10 @@ BOOL SingleFace::ShowVideo(HDC hdc, int width, int height, int originX, int orig
     BOOL ret = TRUE;
 
     // Now, copy a fraction of the camera image into the screen.
-    IFTImage* colorImage = m_DualFTHelper.GetColorImage();
+	auto bestTracker = m_MultiFTHelper.GetBestTracker();
+	auto bestImage = bestTracker.second->GetColorImage();
+
+    IFTImage* colorImage = bestImage;//m_MultiFTHelper.GetColorImage();
     if (colorImage)
     {
         int iWidth = colorImage->GetWidth();
@@ -301,7 +310,7 @@ BOOL SingleFace::ShowVideo(HDC hdc, int width, int height, int originX, int orig
                 {
                     // video image too wide
                     float wx = w1/height;
-                    iLeft = (int)max(0, m_DualFTHelper.GetXCenterFace() - wx / 2);
+                    iLeft = (int)max(0, m_MultiFTHelper.GetXCenterFace() - wx / 2);
                     iRight = iLeft + (int)wx;
                     if (iRight > iWidth)
                     {
@@ -313,7 +322,7 @@ BOOL SingleFace::ShowVideo(HDC hdc, int width, int height, int originX, int orig
                 {
                     // video image too narrow
                     float hy = w2/width;
-                    iTop = (int)max(0, m_DualFTHelper.GetYCenterFace() - hy / 2);
+                    iTop = (int)max(0, m_MultiFTHelper.GetYCenterFace() - hy / 2);
                     iBottom = iTop + (int)hy;
                     if (iBottom > iHeight)
                     {
@@ -387,7 +396,8 @@ void SingleFace::FTHelperCallingBack(PVOID pVoid)
     SingleFace* pApp = reinterpret_cast<SingleFace*>(pVoid);
     if (pApp)
     {
-        IFTResult* pResult = pApp->m_DualFTHelper.GetResult();
+		auto bestTracker = pApp->m_MultiFTHelper.GetBestTracker();
+        IFTResult* pResult = bestTracker.second->GetResult();
         if (pResult && SUCCEEDED(pResult->GetStatus()))
         {
             FLOAT* pAU = NULL;

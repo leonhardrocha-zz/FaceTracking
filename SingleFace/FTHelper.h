@@ -32,7 +32,7 @@ public:
     HRESULT GetCameraConfig(FT_CAMERA_CONFIG* cameraConfig);
 
 protected:
-    KinectSensor                m_KinectSensor;
+    KinectSensor*               m_pKinectSensor;
     BOOL                        m_KinectSensorPresent;
     IFTFaceTracker*             m_pFaceTracker;
     HWND                        m_hWnd;

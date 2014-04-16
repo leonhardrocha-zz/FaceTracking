@@ -1,21 +1,23 @@
 //------------------------------------------------------------------------------
-// <copyright file="DualFTHelper.cpp" company="Microsoft">
+// <copyright file="MultiFTHelper.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //------------------------------------------------------------------------------
 
+#include <map>
 #include "StdAfx.h"
-#include "DualFTHelper.h"
+#include "MultiFTHelper.h"
 #include "Visualize.h"
 
 #ifdef SAMPLE_OPTIONS
-#include "DualOptions.h"
+#include "multiOptions.h"
 #else
-PVOID _dualopt = NULL;
+PVOID _multiopt = NULL;
 #endif
 
-DualFTHelper::DualFTHelper()
+MultiFTHelper::MultiFTHelper()
 {
+	master = this;
     m_pFaceTracker = 0;
     m_hWnd = NULL;
     m_pFTResult = NULL;
@@ -26,7 +28,7 @@ DualFTHelper::DualFTHelper()
     m_CallBack = NULL;
     m_XCenterFace = 0;
     m_YCenterFace = 0;
-    m_hFaceTrackingThread = NULL;
+    MultiFTHelper::m_hFaceTrackingThread = NULL;
     m_DrawMask = TRUE;
     m_depthType = NUI_IMAGE_TYPE_DEPTH;
     m_depthRes = NUI_IMAGE_RESOLUTION_INVALID;
@@ -37,12 +39,66 @@ DualFTHelper::DualFTHelper()
 	m_bSeatedSkeletonMode = true;
 }
 
-DualFTHelper::~DualFTHelper()
+MultiFTHelper::MultiFTHelper(MultiFTHelper* parent)
 {
-    Stop();
+	master = parent;
+    m_pFaceTracker = parent->m_pFaceTracker;
+    m_hWnd = parent->m_hWnd;
+    m_pFTResult = parent->m_pFTResult;
+    m_colorImage = NULL;
+    m_depthImage = NULL;
+    m_ApplicationIsRunning = parent->m_ApplicationIsRunning;
+    m_LastTrackSucceeded = parent->m_LastTrackSucceeded;
+    m_CallBack = parent->m_CallBack;
+	m_CallBackParam = parent->m_CallBackParam;
+	m_hFaceTrackingThread = parent->m_hFaceTrackingThread;
+    m_XCenterFace = parent->m_XCenterFace;
+    m_YCenterFace = parent->m_YCenterFace;
+	m_DrawMask = parent->m_DrawMask;
+    m_depthType = parent->m_depthType;
+    m_depthRes = parent->m_depthRes;
+    m_bNearMode = parent->m_bNearMode;
+    m_bFallbackToDefault = parent->m_bFallbackToDefault;
+    m_colorType = parent->m_colorType;
+    m_colorRes = parent->m_colorRes;
+	m_bSeatedSkeletonMode = parent->m_bSeatedSkeletonMode;
 }
 
-BOOL DualFTHelper::SubmitFraceTrackingResult(IFTResult* pResult)
+
+MultiFTHelper::~MultiFTHelper()
+{
+    Stop();
+	if (m_pFaceTracker)
+	{
+		m_pFaceTracker->Release();
+		m_pFaceTracker = NULL;
+	}
+
+    if(m_colorImage)
+    {
+        m_colorImage->Release();
+        m_colorImage = NULL;
+    }
+
+    if(m_depthImage) 
+    {
+        m_depthImage->Release();
+        m_depthImage = NULL;
+    }
+
+    if(m_pFTResult)
+    {
+        m_pFTResult->Release();
+        m_pFTResult = NULL;
+    }
+	
+	if(m_pKinectSensor)
+	{
+		//m_pKinectSensor->Release();
+	}
+}
+
+BOOL MultiFTHelper::SubmitFraceTrackingResult(IFTResult* pResult)
 {
     if (pResult != NULL && SUCCEEDED(pResult->GetStatus()))
     {
@@ -82,8 +138,19 @@ BOOL DualFTHelper::SubmitFraceTrackingResult(IFTResult* pResult)
     return TRUE;
 }
 
+TrackerPair MultiFTHelper::GetBestTracker()
+{ 
+	 if( validSensors.size() > 0)
+	 {
+		auto best = validSensors.begin(); 
+		return TrackerPair(best->first, best->second);
+	 }
+
+	 return TrackerPair(m_pKinectSensor, this);
+}
+
 // We compute here the nominal "center of attention" that is used when zooming the presented image.
-void DualFTHelper::SetCenterOfImage(IFTResult* pResult)
+void MultiFTHelper::SetCenterOfImage(IFTResult* pResult)
 {
     float centerX = ((float)m_colorImage->GetWidth())/2.0f;
     float centerY = ((float)m_colorImage->GetHeight())/2.0f;
@@ -109,9 +176,9 @@ void DualFTHelper::SetCenterOfImage(IFTResult* pResult)
 // Get a video image and process it.
 
 
-DWORD WINAPI DualFTHelper::FaceTrackingStaticThread(PVOID lpParam)
+DWORD WINAPI MultiFTHelper::FaceTrackingStaticThread(PVOID lpParam)
 {
-    DualFTHelper* context = static_cast<DualFTHelper*>(lpParam);
+    MultiFTHelper* context = static_cast<MultiFTHelper*>(lpParam);
     if (context)
     {
         return context->FaceTrackingThread();
@@ -121,21 +188,13 @@ DWORD WINAPI DualFTHelper::FaceTrackingStaticThread(PVOID lpParam)
 
 
 
-HRESULT DualFTHelper::GetCameraConfig(FT_CAMERA_CONFIG* cameraConfig)
+HRESULT MultiFTHelper::GetCameraConfig(FT_CAMERA_CONFIG* cameraConfig)
 {
 	return m_KinectSensorPresent ? m_pKinectSensor->GetVideoConfiguration(cameraConfig) : E_FAIL;
 }
-
-HRESULT DualFTHelper::Init(HWND hWnd, FTHelperCallBack callBack, PVOID callBackParam, 
-                       NUI_IMAGE_TYPE depthType, NUI_IMAGE_RESOLUTION depthRes, BOOL bNearMode, BOOL bFallbackToDefault, NUI_IMAGE_TYPE colorType, NUI_IMAGE_RESOLUTION colorRes, BOOL bSeatedSkeletonMode)
-{
-    if (!hWnd || !callBack)
-    {
-        return E_INVALIDARG;
-    }
+HRESULT MultiFTHelper::Init(HWND hWnd, NUI_IMAGE_TYPE depthType, NUI_IMAGE_RESOLUTION depthRes, BOOL bNearMode, BOOL bFallbackToDefault, NUI_IMAGE_TYPE colorType, NUI_IMAGE_RESOLUTION colorRes, BOOL bSeatedSkeletonMode)
+{    
     m_hWnd = hWnd;
-    m_CallBack = callBack;
-    m_CallBackParam = callBackParam;
     m_ApplicationIsRunning = true;
     m_depthType = depthType;
     m_depthRes = depthRes;
@@ -144,12 +203,58 @@ HRESULT DualFTHelper::Init(HWND hWnd, FTHelperCallBack callBack, PVOID callBackP
     m_bSeatedSkeletonMode = bSeatedSkeletonMode;
     m_colorType = colorType;
     m_colorRes = colorRes;
-    m_hFaceTrackingThread = CreateThread(NULL, 0, FaceTrackingStaticThread, (PVOID)this, 0, 0);
+	int numSensors = 0;	
+    NuiGetSensorCount(&numSensors);
+
+	for (int i =0; i < numSensors; i++)
+	{
+		KinectSensor* sensor = new KinectSensor();
+		HRESULT hr1 = sensor->Init(m_depthType, m_depthRes, m_bNearMode, m_bFallbackToDefault, m_colorType, m_colorRes, m_bSeatedSkeletonMode);
+
+		if (SUCCEEDED(hr1))
+		{
+			auto *trackerSlave = new MultiFTHelper(this);
+			trackerSlave->m_pKinectSensor = sensor;
+			int trackerInitResult = trackerSlave->StartFaceTracker();
+			
+			if (trackerInitResult != 0)
+			{	
+				m_KinectSensorPresent = false;
+			}
+			else
+			{				
+				m_KinectSensorPresent = true;
+				trackerSlave->SetCenterOfImage(NULL);
+				sensor->m_smallestDistance = i;
+				validSensors.insert(TrackerPair(sensor, trackerSlave));
+			}			
+		}
+		else
+		{
+			delete sensor;
+		}
+	}
+	//m_KinectSensorPresent = false;
+	//m_pKinectSensor = GetBestTracker().first;
+	//StartFaceTracker();
+
     return S_OK;
 }
 
+HRESULT MultiFTHelper::InitThread(FTHelperCallBack callBack, PVOID callBackParam)
+{
+	if (!callBack)
+    {
+        return E_INVALIDARG;
+    }
+	m_CallBack = callBack;
+    m_CallBackParam = callBackParam;
+    m_hFaceTrackingThread = CreateThread(NULL, 0, FaceTrackingStaticThread, (PVOID)this, 0, 0);	 
 
-HRESULT DualFTHelper::Stop()
+	return S_OK;
+}
+
+HRESULT MultiFTHelper::Stop()
 {
     m_ApplicationIsRunning = false;
     if (m_hFaceTrackingThread)
@@ -160,7 +265,8 @@ HRESULT DualFTHelper::Stop()
     return S_OK;
 }
 
-int DualFTHelper::StartFaceTracker()
+
+int MultiFTHelper::StartFaceTracker()
 {
 	FT_CAMERA_CONFIG videoConfig;
     FT_CAMERA_CONFIG depthConfig;
@@ -177,13 +283,13 @@ int DualFTHelper::StartFaceTracker()
     {
 		WCHAR errorText[MAX_PATH];
 		ZeroMemory(errorText, sizeof(WCHAR) * MAX_PATH);
-		wsprintf(errorText, L"Could not initialize the %s Kinect sensor; \n", m_pKinectSensor == &m_FirstKinectSensor ? "first" : "second");
+		wsprintf(errorText, L"Could not initialize the Kinect sensor; \n");
 		MessageBoxW(m_hWnd, errorText, L"Face Tracker Initialization Error\n", MB_OK);
 		return 1;
     }
 
 	// Try to start the face tracker.
-    m_pFaceTracker = FTCreateFaceTracker(_dualopt);
+    m_pFaceTracker = FTCreateFaceTracker(_multiopt);
     if (!m_pFaceTracker)
     {
         MessageBoxW(m_hWnd, L"Could not create the face tracker.\n", L"Face Tracker Initialization Error\n", MB_OK);
@@ -205,6 +311,29 @@ int DualFTHelper::StartFaceTracker()
     hr = m_pFaceTracker->CreateFTResult(&m_pFTResult);
     if (FAILED(hr) || !m_pFTResult)
     {
+#ifdef _DEBUG
+		auto status = m_pFTResult->GetStatus();
+		if(status == FT_ERROR_FACE_DETECTOR_FAILED)
+		{
+			MessageBoxW(m_hWnd, L"Could not initialize the face tracker result.\n", L"Face Tracker Face Detector Error\n", MB_OK);
+		}
+		if(status == E_INVALIDARG)
+		{
+			MessageBoxW(m_hWnd, L"Could not initialize the face tracker result.\n", L"Invalid arguments\n", MB_OK);
+		}
+		if(status == FT_ERROR_AAM_FAILED)
+		{
+			MessageBoxW(m_hWnd, L"Could not initialize the face tracker result.\n", L"Face Tracker AAM Failed\n", MB_OK);
+		}
+		if(status == FT_ERROR_NN_FAILED)
+		{
+			MessageBoxW(m_hWnd, L"Could not initialize the face tracker result.\n", L"Face Tracker NN Failed\n", MB_OK);
+		}
+		if(status == FT_ERROR_EVAL_FAILED)
+		{
+			MessageBoxW(m_hWnd, L"Could not initialize the face tracker result.\n", L"Face Tracker Eval Failed\n", MB_OK);
+		}
+#endif		
         MessageBoxW(m_hWnd, L"Could not initialize the face tracker result.\n", L"Face Tracker Initialization Error\n", MB_OK);
         return 4;
     }
@@ -229,66 +358,43 @@ int DualFTHelper::StartFaceTracker()
 }
 
 
-DWORD WINAPI DualFTHelper::FaceTrackingThread()
-{
-     // Try to get the Kinect camera to work
-    
-	
-	HRESULT hr1 = m_FirstKinectSensor.Init(m_depthType, m_depthRes, m_bNearMode, m_bFallbackToDefault, m_colorType, m_colorRes, m_bSeatedSkeletonMode);
-	m_FirstKinectSensorPresent = SUCCEEDED(hr1);
-
-	HRESULT hr2 = m_SecondKinectSensor.Init(m_depthType, m_depthRes, m_bNearMode, m_bFallbackToDefault, m_colorType, m_colorRes, m_bSeatedSkeletonMode);
-	m_SecondKinectSensorPresent = SUCCEEDED(hr2);
-
-	m_pKinectSensor = m_FirstKinectSensorPresent ? &m_FirstKinectSensor : &m_SecondKinectSensor;
-	m_KinectSensorPresent = m_FirstKinectSensorPresent || m_FirstKinectSensorPresent;
-	
-	
-    int trackerInitResult = StartFaceTracker();
-	if (trackerInitResult > 0)
-	{
-		return trackerInitResult;
-	}
-
-    SetCenterOfImage(NULL);
-	m_LastTrackSucceeded = false;
-    while (m_ApplicationIsRunning)
+DWORD WINAPI MultiFTHelper::FaceTrackingThread()
+{     
+	while (m_ApplicationIsRunning && m_KinectSensorPresent)
     {
-        CheckCameraInput();
-        InvalidateRect(m_hWnd, NULL, FALSE);
-        UpdateWindow(m_hWnd);
-		if (!m_LastTrackSucceeded)
+		HRESULT hrFT;
+		for(auto iterator = validSensors.begin();  iterator != validSensors.end(); ++iterator)
+		{
+			auto tracker = iterator->second;
+			HRESULT hrFT = tracker->GetTrackerResult();				
+			auto trackingStatus = tracker->m_pFTResult->GetStatus();
+			tracker->m_LastTrackSucceeded = SUCCEEDED(hrFT) && SUCCEEDED(trackingStatus);
+			if (tracker->m_LastTrackSucceeded)
+			{
+				tracker->SetCenterOfImage(tracker->m_pFTResult);
+			}
+			
+		}
+		auto bestSensor = GetBestTracker();//validSensors.begin();
+		auto tracker = bestSensor.second;
+		
+		m_pKinectSensor = bestSensor.first;
+		tracker->CheckCameraInput();			
+		
+		InvalidateRect(m_hWnd, NULL, FALSE);
+		UpdateWindow(m_hWnd);
+		
+		if (!tracker->m_LastTrackSucceeded)
 		{
 			SwapKinectSensor();
 		}
         Sleep(16);	
     }
-
-    m_pFaceTracker->Release();
-    m_pFaceTracker = NULL;
-
-    if(m_colorImage)
-    {
-        m_colorImage->Release();
-        m_colorImage = NULL;
-    }
-
-    if(m_depthImage) 
-    {
-        m_depthImage->Release();
-        m_depthImage = NULL;
-    }
-
-    if(m_pFTResult)
-    {
-        m_pFTResult->Release();
-        m_pFTResult = NULL;
-    }
-    m_pKinectSensor->Release();
+	    
     return 0;
 }
 
-HRESULT DualFTHelper::GetTrackerResult()
+HRESULT MultiFTHelper::GetTrackerResult()
 {
 	HRESULT hrFT = E_FAIL;
     if (m_KinectSensorPresent && m_pKinectSensor->GetVideoBuffer())
@@ -323,33 +429,29 @@ HRESULT DualFTHelper::GetTrackerResult()
 	return hrFT;
 }
 
-void DualFTHelper::SwapKinectSensor()
+void MultiFTHelper::SwapKinectSensor()
 {
-	if(m_pKinectSensor == &m_FirstKinectSensor && m_SecondKinectSensorPresent)
+	if (m_KinectSensorPresent)
 	{
-		m_pKinectSensor = &m_SecondKinectSensor;
-		return;
-	}
-
-	if(m_pKinectSensor == &m_SecondKinectSensor && m_FirstKinectSensorPresent)
-	{
-		m_pKinectSensor = &m_FirstKinectSensor;
-		return;
+		auto bestSensor = validSensors.begin();
+		auto tmpSensor = bestSensor->first;
+		auto tmpTracker = bestSensor->second;
+		validSensors.erase(bestSensor);
+		validSensors.insert(TrackerPair(tmpSensor, tmpTracker));
 	}
 }
 
 // Get a video image and process it.
-void DualFTHelper::CheckCameraInput()
+void MultiFTHelper::CheckCameraInput()
 {
-    HRESULT hrFT = GetTrackerResult();
-    m_LastTrackSucceeded = SUCCEEDED(hrFT) && SUCCEEDED(m_pFTResult->GetStatus());
     if (m_LastTrackSucceeded)
     {
         SubmitFraceTrackingResult(m_pFTResult);
     }
     else
-    {
+    {		
         m_pFTResult->Reset();
     }
     SetCenterOfImage(m_pFTResult);
 }
+
