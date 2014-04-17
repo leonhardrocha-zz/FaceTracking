@@ -113,6 +113,9 @@
 xcopy "$(FTSDK_DIR)Redist\x86\FaceTrackData.dll" "$(OutDir)" /eiycq
 </Command>
     </PostBuildEvent>
+    <ProjectReference>
+      <UseLibraryDependencyInputs>true</UseLibraryDependencyInputs>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

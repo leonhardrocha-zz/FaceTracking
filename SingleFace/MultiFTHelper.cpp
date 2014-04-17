@@ -28,7 +28,7 @@ MultiFTHelper::MultiFTHelper()
     m_CallBack = NULL;
     m_XCenterFace = 0;
     m_YCenterFace = 0;
-    MultiFTHelper::m_hFaceTrackingThread = NULL;
+    m_hFaceTrackingThread = NULL;
     m_DrawMask = TRUE;
     m_depthType = NUI_IMAGE_TYPE_DEPTH;
     m_depthRes = NUI_IMAGE_RESOLUTION_INVALID;
@@ -92,9 +92,18 @@ MultiFTHelper::~MultiFTHelper()
         m_pFTResult = NULL;
     }
 	
-	if(m_pKinectSensor)
+	while(!validSensors.empty())
 	{
-		//m_pKinectSensor->Release();
+		auto pair = validSensors.begin();
+		if(pair->first)
+		{
+			delete pair->first;
+		}
+		if(pair->second)
+		{
+			delete pair->second;
+		}		
+		validSensors.erase(pair);
 	}
 }
 
@@ -192,8 +201,23 @@ HRESULT MultiFTHelper::GetCameraConfig(FT_CAMERA_CONFIG* cameraConfig)
 {
 	return m_KinectSensorPresent ? m_pKinectSensor->GetVideoConfiguration(cameraConfig) : E_FAIL;
 }
-HRESULT MultiFTHelper::Init(HWND hWnd, NUI_IMAGE_TYPE depthType, NUI_IMAGE_RESOLUTION depthRes, BOOL bNearMode, BOOL bFallbackToDefault, NUI_IMAGE_TYPE colorType, NUI_IMAGE_RESOLUTION colorRes, BOOL bSeatedSkeletonMode)
-{    
+
+HRESULT MultiFTHelper::Init(HWND hWnd, 
+							NUI_IMAGE_TYPE depthType, 
+							NUI_IMAGE_RESOLUTION depthRes, 
+							BOOL bNearMode, 
+							BOOL bFallbackToDefault, 
+							NUI_IMAGE_TYPE colorType, 
+							NUI_IMAGE_RESOLUTION colorRes, 
+							BOOL bSeatedSkeletonMode,
+							FTHelperCallBack callBack, 
+							PVOID callBackParam)
+{   
+	if (!callBack)
+    {
+        return E_INVALIDARG;
+    }
+
     m_hWnd = hWnd;
     m_ApplicationIsRunning = true;
     m_depthType = depthType;
@@ -203,6 +227,9 @@ HRESULT MultiFTHelper::Init(HWND hWnd, NUI_IMAGE_TYPE depthType, NUI_IMAGE_RESOL
     m_bSeatedSkeletonMode = bSeatedSkeletonMode;
     m_colorType = colorType;
     m_colorRes = colorRes;
+	m_CallBack = callBack;
+    m_CallBackParam = callBackParam;
+
 	int numSensors = 0;	
     NuiGetSensorCount(&numSensors);
 
@@ -234,24 +261,11 @@ HRESULT MultiFTHelper::Init(HWND hWnd, NUI_IMAGE_TYPE depthType, NUI_IMAGE_RESOL
 			delete sensor;
 		}
 	}
-	//m_KinectSensorPresent = false;
-	//m_pKinectSensor = GetBestTracker().first;
-	//StartFaceTracker();
+		
 
-    return S_OK;
-}
-
-HRESULT MultiFTHelper::InitThread(FTHelperCallBack callBack, PVOID callBackParam)
-{
-	if (!callBack)
-    {
-        return E_INVALIDARG;
-    }
-	m_CallBack = callBack;
-    m_CallBackParam = callBackParam;
     m_hFaceTrackingThread = CreateThread(NULL, 0, FaceTrackingStaticThread, (PVOID)this, 0, 0);	 
 
-	return S_OK;
+    return S_OK;
 }
 
 HRESULT MultiFTHelper::Stop()

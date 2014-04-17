@@ -6,68 +6,10 @@
 
 // Defines the entry point for the application.
 //
-
 #include "stdafx.h"
 #include "SingleFace.h"
-#include "EggAvatar.h"
-#include <FaceTrackLib.h>
-#include "FTHelper.h"
-#include "DualFTHelper.h"
-#include "MultiFTHelper.h"
 
 
-
-class SingleFace
-{
-public:
-    SingleFace() 
-        : m_hInst(NULL)
-        , m_hWnd(NULL)
-        , m_hAccelTable(NULL)
-        , m_pImageBuffer(NULL)
-        , m_pVideoBuffer(NULL)
-        , m_depthType(NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX)
-        , m_colorType(NUI_IMAGE_TYPE_COLOR)
-        , m_depthRes(NUI_IMAGE_RESOLUTION_320x240)
-        , m_colorRes(NUI_IMAGE_RESOLUTION_640x480)
-        , m_bNearMode(TRUE)
-        , m_bSeatedSkeletonMode(TRUE)
-
-    {}
-
-    int Run(HINSTANCE hInst, PWSTR lpCmdLine, int nCmdShow);
-
-protected:
-    BOOL                        InitInstance(HINSTANCE hInst, PWSTR lpCmdLine, int nCmdShow);
-    void                        ParseCmdString(PWSTR lpCmdLine);
-    void                        UninitInstance();
-    ATOM                        RegisterClass(PCWSTR szWindowClass);
-    static LRESULT CALLBACK     WndProcStatic(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-    LRESULT CALLBACK            WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-    static INT_PTR CALLBACK     About(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-    BOOL                        PaintWindow(HDC hdc, HWND hWnd);
-    BOOL                        ShowVideo(HDC hdc, int width, int height, int originX, int originY);
-    BOOL                        ShowEggAvatar(HDC hdc, int width, int height, int originX, int originY);
-    static void                 FTHelperCallingBack(LPVOID lpParam);
-    static int const            MaxLoadStringChars = 100;
-
-    HINSTANCE                   m_hInst;
-    HWND                        m_hWnd;
-    HACCEL                      m_hAccelTable;
-    EggAvatar                   m_eggavatar;
-    //FTHelper                    m_DualFTHelper;
-	//DualFTHelper                m_DualFTHelper;
-	MultiFTHelper               m_MultiFTHelper;
-    IFTImage*                   m_pImageBuffer;
-    IFTImage*                   m_pVideoBuffer;
-
-    NUI_IMAGE_TYPE              m_depthType;
-    NUI_IMAGE_TYPE              m_colorType;
-    NUI_IMAGE_RESOLUTION        m_depthRes;
-    NUI_IMAGE_RESOLUTION        m_colorRes;
-    BOOL                        m_bNearMode;
-    BOOL                        m_bSeatedSkeletonMode;
-};
 
 // Run the SingleFace application.
 int SingleFace::Run(HINSTANCE hInst, PWSTR lpCmdLine, int nCmdShow)
@@ -129,19 +71,16 @@ BOOL SingleFace::InitInstance(HINSTANCE hInstance, PWSTR lpCmdLine, int nCmdShow
     ShowWindow(m_hWnd, nCmdShow);
     UpdateWindow(m_hWnd);
 
-	bool IsInitOk = SUCCEEDED(m_MultiFTHelper.Init(	m_hWnd,
+	return SUCCEEDED(m_MultiFTHelper.Init(	m_hWnd,
 											m_depthType,
 											m_depthRes,
 											m_bNearMode,
 											TRUE, // if near mode doesn't work, fall back to default mode
 											m_colorType,
 											m_colorRes,
-											m_bSeatedSkeletonMode));
-	if (IsInitOk)
-	{
-		IsInitOk &= SUCCEEDED(m_MultiFTHelper.InitThread(FTHelperCallingBack, this));
-	}
-    return  IsInitOk;
+											m_bSeatedSkeletonMode,
+											FTHelperCallingBack, 
+											this));
 }
 
 void SingleFace::UninitInstance()
