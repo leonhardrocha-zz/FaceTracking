@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SingleFace", "SingleFace\SingleFace.vcxproj", "{5FEEEF4F-6788-4AF3-A682-91C3110E1BF8}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MultiFace", "MultiFace\MultiFace.vcxproj", "{90385761-EBCE-47EE-BF8C-8B48E971FD7F}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenGLHelper", "..\OpenGLApplication\OpenGLApplication\OpenGLApplication.vcxproj", "{BB169C6F-9C29-48C1-BCCF-45E03B1B6B5C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenGLQtApp", "..\OpenGLApplication\OpenGLQtApp\OpenGLQtApp.vcxproj", "{40010AA8-43C8-475B-8DE5-1F9A6092706B}"
@@ -50,27 +48,6 @@ Global
 		{5FEEEF4F-6788-4AF3-A682-91C3110E1BF8}.Template|Win32.ActiveCfg = Release|x64
 		{5FEEEF4F-6788-4AF3-A682-91C3110E1BF8}.Template|x64.ActiveCfg = Release|x64
 		{5FEEEF4F-6788-4AF3-A682-91C3110E1BF8}.Template|x64.Build.0 = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Debug|Win32.ActiveCfg = Debug|Win32
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Debug|Win32.Build.0 = Debug|Win32
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Debug|x64.ActiveCfg = Debug|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Debug|x64.Build.0 = Debug|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.MinSizeRel|Win32.ActiveCfg = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.MinSizeRel|x64.ActiveCfg = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.MinSizeRel|x64.Build.0 = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Osg 3.0.1 Release|Win32.ActiveCfg = Release|Win32
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Osg 3.0.1 Release|Win32.Build.0 = Release|Win32
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Osg 3.0.1 Release|x64.ActiveCfg = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Osg 3.0.1 Release|x64.Build.0 = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Release|Win32.ActiveCfg = Release|Win32
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Release|Win32.Build.0 = Release|Win32
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Release|x64.ActiveCfg = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Release|x64.Build.0 = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.RelWithDebInfo|Win32.ActiveCfg = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.RelWithDebInfo|x64.ActiveCfg = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.RelWithDebInfo|x64.Build.0 = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Template|Win32.ActiveCfg = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Template|x64.ActiveCfg = Release|x64
-		{90385761-EBCE-47EE-BF8C-8B48E971FD7F}.Template|x64.Build.0 = Release|x64
 		{BB169C6F-9C29-48C1-BCCF-45E03B1B6B5C}.Debug|Win32.ActiveCfg = Debug|Win32
 		{BB169C6F-9C29-48C1-BCCF-45E03B1B6B5C}.Debug|Win32.Build.0 = Debug|Win32
 		{BB169C6F-9C29-48C1-BCCF-45E03B1B6B5C}.Debug|x64.ActiveCfg = Debug|Win32
