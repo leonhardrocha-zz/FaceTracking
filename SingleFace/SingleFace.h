@@ -31,9 +31,13 @@ public:
     {}
 
     int Run(HINSTANCE hInst, PWSTR lpCmdLine, int nCmdShow);
-
+	HWND						GetHWnd() { return m_hWnd;};
+	HINSTANCE					GetInstance() { return m_hInst; };
+    BOOL                        InitInstanceHost(HINSTANCE hInst, PWSTR lpCmdLine, int nCmdShow, HWND hWnd);
+	
 protected:
-    BOOL                        InitInstance(HINSTANCE hInst, PWSTR lpCmdLine, int nCmdShow);
+	BOOL                        InitInstance(HINSTANCE hInst, PWSTR lpCmdLine, int nCmdShow);
+
     void                        ParseCmdString(PWSTR lpCmdLine);
     void                        UninitInstance();
     ATOM                        RegisterClass(PCWSTR szWindowClass);

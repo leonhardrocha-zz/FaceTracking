@@ -10,7 +10,6 @@
 #include "SingleFace.h"
 
 
-
 // Run the SingleFace application.
 int SingleFace::Run(HINSTANCE hInst, PWSTR lpCmdLine, int nCmdShow)
 {
@@ -82,6 +81,52 @@ BOOL SingleFace::InitInstance(HINSTANCE hInstance, PWSTR lpCmdLine, int nCmdShow
 											FTHelperCallingBack, 
 											this));
 }
+
+// In this function, we save the instance handle, then create and display the main program window.
+BOOL SingleFace::InitInstanceHost(HINSTANCE hInstance, PWSTR lpCmdLine, int nCmdShow, HWND hWnd)
+{
+    m_hInst = hInstance; // Store instance handle in our global variable
+
+    ParseCmdString(lpCmdLine);
+
+    WCHAR szTitle[MaxLoadStringChars];                  // The title bar text
+    LoadString(m_hInst, IDS_APP_TITLE, szTitle, ARRAYSIZE(szTitle));
+
+    static const PCWSTR RES_MAP[] = { L"80x60", L"320x240", L"640x480", L"1280x960" };
+    static const PCWSTR IMG_MAP[] = { L"PLAYERID", L"RGB", L"YUV", L"YUV_RAW", L"DEPTH" };
+
+    // Add mode params in title
+    WCHAR szTitleComplete[MAX_PATH];
+    swprintf_s(szTitleComplete, L"%s -- Depth:%s:%s Color:%s:%s NearMode:%s, SeatedSkeleton:%s", szTitle,
+        IMG_MAP[m_depthType], (m_depthRes < 0)? L"ERROR": RES_MAP[m_depthRes], IMG_MAP[m_colorType], (m_colorRes < 0)? L"ERROR": RES_MAP[m_colorRes], m_bNearMode? L"ON": L"OFF",
+        m_bSeatedSkeletonMode?L"ON": L"OFF");
+
+    WCHAR szWindowClass[MaxLoadStringChars];            // the main window class name
+    LoadString(m_hInst, IDC_SINGLEFACE, szWindowClass, ARRAYSIZE(szWindowClass));
+
+    RegisterClass(szWindowClass);
+
+    m_hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_SINGLEFACE));
+
+    m_pImageBuffer = FTCreateImage();
+    m_pVideoBuffer = FTCreateImage();
+
+    m_hWnd = hWnd;
+    ShowWindow(m_hWnd, nCmdShow);
+    UpdateWindow(m_hWnd);
+
+	return SUCCEEDED(m_MultiFTHelper.Init(	m_hWnd,
+											m_depthType,
+											m_depthRes,
+											m_bNearMode,
+											TRUE, // if near mode doesn't work, fall back to default mode
+											m_colorType,
+											m_colorRes,
+											m_bSeatedSkeletonMode,
+											FTHelperCallingBack, 
+											this));
+}
+
 
 void SingleFace::UninitInstance()
 {
@@ -467,12 +512,12 @@ void SingleFace::ParseCmdString(PWSTR lpCmdLine)
 
 
 // Program's main entry point
-int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
-{
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    SingleFace app;
-
-    HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
-
-    return app.Run(hInstance, lpCmdLine, nCmdShow);
-}
+//static int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
+//{
+//    UNREFERENCED_PARAMETER(hPrevInstance);
+//    SingleFace app;
+//
+//    HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
+//
+//    return app.Run(hInstance, lpCmdLine, nCmdShow);
+//}
